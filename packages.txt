@@ -1,2 +1,4 @@
 espeak
-python3-espeak 
+python3-espeak
+build-essential
+python3-dev 
