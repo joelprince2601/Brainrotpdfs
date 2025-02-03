@@ -1,4 +1,11 @@
 espeak
 python3-espeak
 build-essential
-python3-dev 
+python3-dev
+ffmpeg
+libespeak1
+espeak-data
+libasound2
+portaudio19-dev
+python3-pyaudio
+libespeak-dev 
