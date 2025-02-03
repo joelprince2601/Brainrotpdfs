@@ -10,11 +10,16 @@ from audio_processor import AudioProcessor
 from video_processor import VideoProcessor
 from brainrotslang import BrainRotProcessor
 
-# Download spaCy model if not present
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+@st.cache_resource
+def load_spacy_model():
+    try:
+        return spacy.load("en_core_web_sm")
+    except OSError:
+        st.info("Downloading spaCy model... This may take a moment.")
+        subprocess.run([
+            "python", "-m", "spacy", "download", "en_core_web_sm"
+        ], capture_output=True)
+        return spacy.load("en_core_web_sm")
 
 def main():
     st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
@@ -33,6 +38,9 @@ def main():
     audio_processor = AudioProcessor()
     video_processor = VideoProcessor("https://www.youtube.com/watch?v=u7kdVe8q5zs")
     brain_rot_processor = BrainRotProcessor()
+    
+    # Use this in your main function
+    nlp = load_spacy_model()
     
     # File uploader
     uploaded_pdf = st.file_uploader("Choose a PDF file", type="pdf")
