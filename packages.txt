@@ -1,3 +1,0 @@
-ffmpeg
-espeak
-python3-espeak 
