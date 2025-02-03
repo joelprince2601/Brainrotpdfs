@@ -1,0 +1,15 @@
+pdfplumber
+spacy>=3.0.0
+pyttsx3
+streamlit>=1.0.0
+pytube
+numpy
+decorator
+imageio
+imageio-ffmpeg
+proglog
+tqdm
+requests
+pillow
+psutil
+python-espeak 
