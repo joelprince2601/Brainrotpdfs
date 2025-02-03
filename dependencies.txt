@@ -1,4 +1,0 @@
-streamlit
-spacy
-pdfplumber
-pyttsx3 
