@@ -2,4 +2,6 @@ espeak
 python3-espeak
 ffmpeg
 libespeak1
-portaudio19-dev 
+portaudio19-dev
+python3-pip
+python3-setuptools 
