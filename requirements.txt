@@ -1,5 +1,6 @@
 pdfplumber==0.10.3
 spacy==3.7.2
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz
 pyttsx3==2.90
 streamlit==1.29.0
 pytube==15.0.0
