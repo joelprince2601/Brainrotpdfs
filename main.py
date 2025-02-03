@@ -9,6 +9,9 @@ from text_summarizer import TextSummarizer
 from audio_processor import AudioProcessor
 from video_processor import VideoProcessor
 
+# Must be the first Streamlit command
+st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
+
 @st.cache_resource
 def load_spacy_model():
     """Load spaCy model with caching"""
@@ -29,8 +32,6 @@ def main():
         st.error(f"Error loading language model: {str(e)}")
         return
 
-    st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
-    
     st.title("PDF Processor with AI")
     st.write("""
     This application processes PDF documents using AI to:
