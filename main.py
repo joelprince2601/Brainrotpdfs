@@ -2,8 +2,6 @@ import streamlit as st
 import tempfile
 import os
 import time
-import spacy
-import subprocess
 from pdf_extractor import PDFExtractor
 from text_summarizer import TextSummarizer
 from audio_processor import AudioProcessor
@@ -13,15 +11,11 @@ from brainrotslang import BrainRotProcessor
 @st.cache_resource
 def load_spacy_model():
     try:
+        import spacy
         return spacy.load("en_core_web_sm")
-    except OSError:
-        st.warning("Installing spaCy model... This may take a moment.")
-        try:
-            import en_core_web_sm
-            return en_core_web_sm.load()
-        except ImportError:
-            st.error("Failed to load spaCy model. Please contact support.")
-            return None
+    except Exception as e:
+        st.error(f"Error loading spaCy model: {str(e)}")
+        return None
 
 def main():
     st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
@@ -35,11 +29,15 @@ def main():
     """)
     
     # Initialize processors
-    pdf_extractor = PDFExtractor()
-    text_summarizer = TextSummarizer()
-    audio_processor = AudioProcessor()
-    video_processor = VideoProcessor("https://www.youtube.com/watch?v=u7kdVe8q5zs")
-    brain_rot_processor = BrainRotProcessor()
+    try:
+        pdf_extractor = PDFExtractor()
+        text_summarizer = TextSummarizer()
+        audio_processor = AudioProcessor()
+        video_processor = VideoProcessor("https://www.youtube.com/watch?v=u7kdVe8q5zs")
+        brain_rot_processor = BrainRotProcessor()
+    except Exception as e:
+        st.error(f"Error initializing processors: {str(e)}")
+        return
     
     # Use this in your main function
     nlp = load_spacy_model()
