@@ -1,12 +1,18 @@
 import spacy
+import streamlit as st
 
 class TextSummarizer:
     def __init__(self):
-        # Load English language model from spaCy
-        self.nlp = spacy.load("en_core_web_sm")
+        try:
+            self.nlp = spacy.load("en_core_web_sm")
+        except Exception as e:
+            st.error("Error loading language model. Summaries may not work properly.")
+            self.nlp = None
     
     def extract_key_information(self, text: str) -> str:
         """Extract important information using spaCy"""
+        if self.nlp is None:
+            return text  # Return original text if model isn't available
         doc = self.nlp(text)
         
         # Extract named entities, noun phrases, and important sentences
