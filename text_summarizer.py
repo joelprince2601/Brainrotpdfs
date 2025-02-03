@@ -1,18 +1,17 @@
+import spacy
 import streamlit as st
 
 class TextSummarizer:
     def __init__(self):
+        # Load English language model from spaCy
         try:
-            import spacy
             self.nlp = spacy.load("en_core_web_sm")
-        except Exception as e:
-            st.error(f"Error loading language model: {str(e)}")
-            self.nlp = None
+        except OSError:
+            st.error("Language model not loaded. Please refresh the page.")
+            raise
     
     def extract_key_information(self, text: str) -> str:
         """Extract important information using spaCy"""
-        if self.nlp is None:
-            return text  # Return original text if model isn't available
         try:
             doc = self.nlp(text)
             
@@ -29,6 +28,5 @@ class TextSummarizer:
             summary = " ".join(important_sentences)
             return summary if summary else "No important information found on this page."
         except Exception as e:
-            st.warning(f"Error in text processing: {str(e)}")
-            return text
-        
+            st.error(f"Error in text processing: {str(e)}")
+            return "" 
