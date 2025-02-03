@@ -9,13 +9,26 @@ from text_summarizer import TextSummarizer
 from audio_processor import AudioProcessor
 from video_processor import VideoProcessor
 
-# Download spaCy model if not already downloaded
-try:
-    import en_core_web_sm
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+@st.cache_resource
+def load_spacy_model():
+    """Load spaCy model with caching"""
+    import spacy
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except OSError:
+        # Download the model if it's not installed
+        subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+        nlp = spacy.load("en_core_web_sm")
+    return nlp
 
 def main():
+    # Load spaCy model at startup
+    try:
+        nlp = load_spacy_model()
+    except Exception as e:
+        st.error(f"Error loading language model: {str(e)}")
+        return
+
     st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
     
     st.title("PDF Processor with AI")
