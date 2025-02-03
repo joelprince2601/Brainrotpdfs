@@ -15,11 +15,13 @@ def load_spacy_model():
     try:
         return spacy.load("en_core_web_sm")
     except OSError:
-        st.info("Downloading spaCy model... This may take a moment.")
-        subprocess.run([
-            "python", "-m", "spacy", "download", "en_core_web_sm"
-        ], capture_output=True)
-        return spacy.load("en_core_web_sm")
+        st.warning("Installing spaCy model... This may take a moment.")
+        try:
+            import en_core_web_sm
+            return en_core_web_sm.load()
+        except ImportError:
+            st.error("Failed to load spaCy model. Please contact support.")
+            return None
 
 def main():
     st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
@@ -41,6 +43,10 @@ def main():
     
     # Use this in your main function
     nlp = load_spacy_model()
+    
+    if nlp is None:
+        st.error("Could not initialize the language model. Some features may not work.")
+        return
     
     # File uploader
     uploaded_pdf = st.file_uploader("Choose a PDF file", type="pdf")
