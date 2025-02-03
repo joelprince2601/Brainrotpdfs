@@ -2,20 +2,18 @@ import streamlit as st
 import tempfile
 import os
 import time
+import subprocess
+import sys
 from pdf_extractor import PDFExtractor
 from text_summarizer import TextSummarizer
 from audio_processor import AudioProcessor
 from video_processor import VideoProcessor
-from brainrotslang import BrainRotProcessor
 
-@st.cache_resource
-def load_spacy_model():
-    try:
-        import spacy
-        return spacy.load("en_core_web_sm")
-    except Exception as e:
-        st.error(f"Error loading spaCy model: {str(e)}")
-        return None
+# Download spaCy model if not already downloaded
+try:
+    import en_core_web_sm
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
 
 def main():
     st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
@@ -29,22 +27,10 @@ def main():
     """)
     
     # Initialize processors
-    try:
-        pdf_extractor = PDFExtractor()
-        text_summarizer = TextSummarizer()
-        audio_processor = AudioProcessor()
-        video_processor = VideoProcessor("https://www.youtube.com/watch?v=u7kdVe8q5zs")
-        brain_rot_processor = BrainRotProcessor()
-    except Exception as e:
-        st.error(f"Error initializing processors: {str(e)}")
-        return
-    
-    # Use this in your main function
-    nlp = load_spacy_model()
-    
-    if nlp is None:
-        st.error("Could not initialize the language model. Some features may not work.")
-        return
+    pdf_extractor = PDFExtractor()
+    text_summarizer = TextSummarizer()
+    audio_processor = AudioProcessor()
+    video_processor = VideoProcessor("https://www.youtube.com/watch?v=u7kdVe8q5zs")
     
     # File uploader
     uploaded_pdf = st.file_uploader("Choose a PDF file", type="pdf")
@@ -82,18 +68,11 @@ def main():
                         video_path = f"video_with_audio_page_{page_num}_{timestamp}.mp4"
                         
                         try:
-                            # Process text through brain rot language processor
-                            processed_summary = brain_rot_processor.process_text(summary)
-                            if processed_summary != summary:
-                                st.info("Brain rot language detected and processed! 🧠")
-                                st.write("**Processed Summary:**")
-                                st.write(processed_summary)
-                            
                             # Generate audio
                             st.write("Generating audio...")
-                            if audio_processor.save_audio(processed_summary, audio_path):
+                            if audio_processor.save_audio(summary, audio_path):
                                 st.write("Creating video player...")
-                                if video_processor.create_video_player(audio_path, processed_summary):
+                                if video_processor.create_video_player(audio_path, summary):
                                     st.success("Processing complete!")
                                 else:
                                     st.error("Failed to create video player")
