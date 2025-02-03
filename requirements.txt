@@ -19,4 +19,5 @@ torch
 torchaudio
 scipy
 librosa
-soundfile 
+soundfile
+PyAudio==0.2.13 
