@@ -4,51 +4,67 @@ from collections import Counter
 
 class TextSummarizer:
     def __init__(self):
-        # Load English language model from spaCy
         try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            st.error("Language model not loaded. Please refresh the page.")
+            # Use st.cache_resource to load model only once
+            self.nlp = self.load_model()
+        except Exception as e:
+            st.error(f"Error loading language model: {str(e)}")
             raise
-    
-    def extract_key_information(self, text: str) -> str:
-        """Extract important information using spaCy"""
+
+    @st.cache_resource
+    def load_model():
+        """Load spaCy model with caching"""
         try:
+            return spacy.load("en_core_web_sm")
+        except OSError:
+            st.warning("Downloading language model... This may take a moment.")
+            spacy.cli.download("en_core_web_sm")
+            return spacy.load("en_core_web_sm")
+
+    def extract_key_information(self, text: str) -> str:
+        """Extract important information using basic NLP"""
+        if not text.strip():
+            return "No text to analyze."
+            
+        try:
+            # Basic sentence splitting
+            sentences = [s.strip() for s in text.split('.') if s.strip()]
+            if not sentences:
+                return "No complete sentences found."
+
+            # Process with spaCy
             doc = self.nlp(text)
             
-            # Score sentences based on important elements
-            sentence_scores = {}
+            # Simple scoring system
+            scores = []
             for sent in doc.sents:
                 score = 0
-                # Count named entities
-                score += len([ent for ent in sent.ents])
-                # Count important POS tags
-                pos_counts = Counter(token.pos_ for token in sent)
-                score += pos_counts.get('NOUN', 0) * 0.5
-                score += pos_counts.get('PROPN', 0) * 0.7
-                score += pos_counts.get('VERB', 0) * 0.3
+                # Named entities boost score
+                score += len(list(sent.ents)) * 2
                 
-                sentence_scores[sent.text.strip()] = score
-            
-            # Select top scoring sentences
-            important_sentences = sorted(
-                [(score, sent) for sent, score in sentence_scores.items() if score > 0],
-                reverse=True
-            )
-            
-            # Take top 3 sentences or fewer if less available
-            selected_sentences = [sent for _, sent in important_sentences[:3]]
-            
-            if selected_sentences:
-                # Sort sentences by their original order
-                original_sentences = [sent.text.strip() for sent in doc.sents]
-                ordered_summary = [sent for sent in original_sentences if sent in selected_sentences]
+                # Count important words
+                words = [token.text.lower() for token in sent 
+                        if not token.is_stop and not token.is_punct]
+                score += len(words) * 0.5
                 
-                summary = " ".join(ordered_summary)
-                return summary
+                # Bonus for longer meaningful sentences (but not too long)
+                if 5 <= len(words) <= 20:
+                    score += 1
+                    
+                scores.append((score, sent.text.strip()))
+
+            # Get top 3 sentences
+            top_sentences = sorted(scores, reverse=True)[:3]
             
-            return "No important information found on this page."
+            if not top_sentences:
+                return "Could not identify key information."
+                
+            # Reconstruct in original order
+            summary_sentences = [sent for _, sent in top_sentences]
+            summary = " ".join(summary_sentences)
+            
+            return summary if summary else "No important information found."
             
         except Exception as e:
             st.error(f"Error in text processing: {str(e)}")
-            return "" 
+            return "Error processing text." 
