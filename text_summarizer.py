@@ -1,5 +1,6 @@
 import spacy
 import streamlit as st
+from collections import Counter
 
 class TextSummarizer:
     def __init__(self):
@@ -15,25 +16,37 @@ class TextSummarizer:
         try:
             doc = self.nlp(text)
             
-            # Extract sentences with named entities or important noun phrases
-            important_sentences = []
+            # Score sentences based on important elements
+            sentence_scores = {}
             for sent in doc.sents:
-                # Check for named entities
-                has_entities = len(list(sent.ents)) > 0
+                score = 0
+                # Count named entities
+                score += len([ent for ent in sent.ents])
+                # Count important POS tags
+                pos_counts = Counter(token.pos_ for token in sent)
+                score += pos_counts.get('NOUN', 0) * 0.5
+                score += pos_counts.get('PROPN', 0) * 0.7
+                score += pos_counts.get('VERB', 0) * 0.3
                 
-                # Check for noun chunks (important phrases)
-                has_noun_chunks = any(chunk.root.pos_ in ['NOUN', 'PROPN'] for chunk in sent.noun_chunks)
-                
-                if has_entities or has_noun_chunks:
-                    important_sentences.append(sent.text.strip())
+                sentence_scores[sent.text.strip()] = score
             
-            # Combine the summary
-            if important_sentences:
-                summary = " ".join(important_sentences)
-                # Ensure the summary isn't too long
-                if len(summary) > 1000:
-                    summary = " ".join(important_sentences[:3]) + "..."
+            # Select top scoring sentences
+            important_sentences = sorted(
+                [(score, sent) for sent, score in sentence_scores.items() if score > 0],
+                reverse=True
+            )
+            
+            # Take top 3 sentences or fewer if less available
+            selected_sentences = [sent for _, sent in important_sentences[:3]]
+            
+            if selected_sentences:
+                # Sort sentences by their original order
+                original_sentences = [sent.text.strip() for sent in doc.sents]
+                ordered_summary = [sent for sent in original_sentences if sent in selected_sentences]
+                
+                summary = " ".join(ordered_summary)
                 return summary
+            
             return "No important information found on this page."
             
         except Exception as e:
