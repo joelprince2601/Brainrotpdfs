@@ -20,13 +20,17 @@ DATA_DIR.mkdir(exist_ok=True)
 @st.cache_resource
 def load_spacy_model():
     """Load spaCy model with caching"""
-    import spacy
     try:
-        nlp = spacy.load("en_core_web_sm")
+        import spacy
+        return spacy.load("en_core_web_sm")
     except OSError:
-        subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
-        nlp = spacy.load("en_core_web_sm")
-    return nlp
+        st.info("Downloading language model... This may take a moment.")
+        import spacy.cli
+        spacy.cli.download("en_core_web_sm")
+        return spacy.load("en_core_web_sm")
+    except Exception as e:
+        st.error(f"Error loading language model: {str(e)}")
+        return None
 
 @st.cache_data
 def get_temp_file_path(prefix, suffix):
