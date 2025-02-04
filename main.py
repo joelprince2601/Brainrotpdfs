@@ -4,6 +4,7 @@ import os
 import time
 import subprocess
 import sys
+from pathlib import Path
 from pdf_extractor import PDFExtractor
 from text_summarizer import TextSummarizer
 from audio_processor import AudioProcessor
@@ -12,6 +13,10 @@ from video_processor import VideoProcessor
 # Must be the first Streamlit command
 st.set_page_config(page_title="PDF Processor with AI", page_icon="📚")
 
+# Create data directory if it doesn't exist
+DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
 @st.cache_resource
 def load_spacy_model():
     """Load spaCy model with caching"""
@@ -19,12 +24,32 @@ def load_spacy_model():
     try:
         nlp = spacy.load("en_core_web_sm")
     except OSError:
-        # Download the model if it's not installed
         subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
         nlp = spacy.load("en_core_web_sm")
     return nlp
 
+@st.cache_data
+def get_temp_file_path(prefix, suffix):
+    """Generate a temporary file path in the data directory"""
+    timestamp = int(time.time() * 1000)
+    return str(DATA_DIR / f"{prefix}_{timestamp}{suffix}")
+
+def cleanup_old_files():
+    """Clean up files older than 1 hour"""
+    current_time = time.time()
+    for file in DATA_DIR.glob("*"):
+        if file.name == ".gitkeep":
+            continue
+        if current_time - file.stat().st_mtime > 3600:  # 1 hour
+            try:
+                file.unlink()
+            except Exception as e:
+                st.warning(f"Could not remove old file {file}: {str(e)}")
+
 def main():
+    # Clean up old files
+    cleanup_old_files()
+    
     # Load spaCy model at startup
     try:
         nlp = load_spacy_model()
@@ -50,10 +75,10 @@ def main():
     uploaded_pdf = st.file_uploader("Choose a PDF file", type="pdf")
     
     if uploaded_pdf is not None:
-        # Save uploaded PDF
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as pdf_tmp:
-            pdf_tmp.write(uploaded_pdf.getvalue())
-            pdf_path = pdf_tmp.name
+        # Save uploaded PDF to data directory
+        pdf_path = get_temp_file_path("uploaded", ".pdf")
+        with open(pdf_path, "wb") as f:
+            f.write(uploaded_pdf.getvalue())
         
         try:
             # Process PDF
@@ -76,54 +101,36 @@ def main():
                         st.write("**Summary:**")
                         st.write(summary)
                         
-                        # Create files with unique names
-                        timestamp = int(time.time() * 1000)
-                        audio_path = f"summary_page_{page_num}_{timestamp}.mp3"
-                        video_path = f"video_with_audio_page_{page_num}_{timestamp}.mp4"
+                        # Create files with unique names in data directory
+                        audio_path = get_temp_file_path(f"summary_page_{page_num}", ".mp3")
                         
                         try:
                             # Generate audio
-                            st.write("Generating audio...")
-                            if audio_processor.save_audio(summary, audio_path):
-                                st.write("Creating video player...")
-                                if video_processor.create_video_player(audio_path, summary):
-                                    st.success("Processing complete!")
-                                else:
-                                    st.error("Failed to create video player")
-                            else:
-                                st.error("Failed to generate audio")
-                        finally:
-                            # Cleanup with improved file handling
-                            for file_path in [audio_path, video_path]:
-                                for retry in range(3):  # Try up to 3 times
-                                    try:
-                                        if os.path.exists(file_path):
-                                            # Force close any handles
-                                            import psutil
-                                            for proc in psutil.process_iter():
-                                                try:
-                                                    for item in proc.open_files():
-                                                        if item.path == os.path.abspath(file_path):
-                                                            proc.kill()
-                                                except:
-                                                    continue
-                                            
-                                            os.remove(file_path)
-                                            break  # Success, exit retry loop
-                                    except Exception as e:
-                                        if retry == 2:  # Last attempt
-                                            st.warning(f"Could not remove temporary file {file_path}: {str(e)}")
+                            with st.spinner("Generating audio..."):
+                                if audio_processor.save_audio(summary, audio_path):
+                                    with st.spinner("Creating video player..."):
+                                        if video_processor.create_video_player(audio_path, summary):
+                                            st.success("Processing complete!")
                                         else:
-                                            time.sleep(1)  # Wait before retry
+                                            st.error("Failed to create video player")
+                                else:
+                                    st.error("Failed to generate audio")
+                        except Exception as e:
+                            st.error(f"Error processing audio/video: {str(e)}")
+                            if os.path.exists(audio_path):
+                                os.unlink(audio_path)
                     
                     except Exception as e:
                         st.error(f"Error processing page {page_num}: {str(e)}")
                         continue
         
         finally:
-            # Clean up PDF
-            if os.path.exists(pdf_path):
-                os.unlink(pdf_path)
+            # Clean up the uploaded PDF
+            try:
+                if os.path.exists(pdf_path):
+                    os.unlink(pdf_path)
+            except Exception as e:
+                st.warning(f"Could not remove temporary PDF file: {str(e)}")
 
 if __name__ == "__main__":
     main() 
