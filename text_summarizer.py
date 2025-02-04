@@ -15,18 +15,27 @@ class TextSummarizer:
         try:
             doc = self.nlp(text)
             
-            # Extract named entities, noun phrases, and important sentences
-            entities = [ent.text for ent in doc.ents]
-            
-            # Basic summarization by selecting sentences with entities
+            # Extract sentences with named entities or important noun phrases
             important_sentences = []
             for sent in doc.sents:
-                if any(ent.text in sent.text for ent in doc.ents):
-                    important_sentences.append(sent.text)
+                # Check for named entities
+                has_entities = len(list(sent.ents)) > 0
+                
+                # Check for noun chunks (important phrases)
+                has_noun_chunks = any(chunk.root.pos_ in ['NOUN', 'PROPN'] for chunk in sent.noun_chunks)
+                
+                if has_entities or has_noun_chunks:
+                    important_sentences.append(sent.text.strip())
             
             # Combine the summary
-            summary = " ".join(important_sentences)
-            return summary if summary else "No important information found on this page."
+            if important_sentences:
+                summary = " ".join(important_sentences)
+                # Ensure the summary isn't too long
+                if len(summary) > 1000:
+                    summary = " ".join(important_sentences[:3]) + "..."
+                return summary
+            return "No important information found on this page."
+            
         except Exception as e:
             st.error(f"Error in text processing: {str(e)}")
             return "" 
